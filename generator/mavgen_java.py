@@ -49,11 +49,13 @@ def generate_CRC(outputDirectory, xml):
     mavparse.mkdir_p(directory)
 
     # and message CRCs array
-    xml.message_crcs_array = ''
-    for msgid in range(256):
-        crc = xml.message_crcs.get(msgid, 0)
-        xml.message_crcs_array += '%u, ' % crc
-    xml.message_crcs_array = xml.message_crcs_array[:-2]
+    message_crc_array = []
+
+    for key in xml.message_crcs:
+        crcString = '        MAVLINK_MESSAGE_CRCS.put({}, {});'.format(key, xml.message_crcs[key])
+        message_crc_array.append(crcString)
+
+    xml.message_crc = os.linesep.join(message_crc_array)
     
     f = open(os.path.join(directory, "CRC.java"), mode='w')
     t.write(f,'''
@@ -65,6 +67,8 @@ def generate_CRC(outputDirectory, xml):
 
 package com.MAVLink.${basename};
 
+import java.util.HashMap;
+
 /**
 * X.25 CRC calculation for MAVlink messages. The checksum must be initialized,
 * updated with witch field of the message, and then finished with the message
@@ -72,7 +76,12 @@ package com.MAVLink.${basename};
 *
 */
 public class CRC {
-    private static final int[] MAVLINK_MESSAGE_CRCS = {${message_crcs_array}};
+
+    private static final HashMap<Integer, Integer> MAVLINK_MESSAGE_CRCS = new HashMap<Integer, Integer>();
+    static {
+${message_crc}
+    }
+    
     private static final int CRC_INIT_VALUE = 0xffff;
     private int crcValue;
 
@@ -100,7 +109,10 @@ public class CRC {
     *            The message id number
     */
     public void finish_checksum(int msgid) {
-        update_checksum(MAVLINK_MESSAGE_CRCS[msgid]);
+        Integer messageCRC = MAVLINK_MESSAGE_CRCS.get(msgid);
+        if(messageCRC != null){
+            update_checksum(messageCRC);
+        }
     }
 
     /**
