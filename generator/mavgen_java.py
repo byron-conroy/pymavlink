@@ -42,7 +42,12 @@ ${{entry:   public static final int ${name} = ${value}; /* ${description} |${{pa
 
 
 
-def generate_CRC(directory, xml):
+def generate_CRC(outputDirectory, xml):
+    directory = os.path.join(outputDirectory, xml.basename)
+
+    print("Generating Message CRCs in directory %s" % directory)
+    mavparse.mkdir_p(directory)
+
     # and message CRCs array
     xml.message_crcs_array = ''
     for msgid in range(256):
@@ -606,13 +611,14 @@ def generate_one(basename, xml):
         for f in m.ordered_fields:
             f.type = mavfmt(f)
     
-    generate_CRC(directory, xml)
-    
     for m in xml.message:
         generate_message_h(directory, m)
 
 
 def generate(basename, xml_list):
+
+    generate_CRC(basename, xml_list[0])
+
     '''generate complete MAVLink Java implemenation'''
     for xml in xml_list:
         generate_one(basename, xml)
